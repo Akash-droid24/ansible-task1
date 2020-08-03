@@ -1,0 +1,93 @@
+- name: Integrating Ansible with Docker
+  hosts: dockerweb 
+  tasks:
+    - name: Creating Docker repo
+      yum_repository:
+        name: docker
+        description: docker.repo
+        baseurl: "https://download.docker.com/linux/centos/7/x86_64/stable"
+        gpgcheck: no
+
+    - name: "Installing Docker SDK"
+      pip:
+        name: "docker"
+      register: p
+    
+    - name: Checking SDK install status   
+      debug: 
+        var: p
+
+    - name: Installing Docker package
+      package:
+        name: "docker-ce-18.09.1*"
+        state: present
+      register: x
+
+    - name: Docker installation status  
+      debug:
+        var: x
+
+    - name: Starting Docker services
+      service:
+        name: "docker"
+        state: started
+        enabled: yes
+      
+    - command: "systemctl status docker"  
+      register: y
+
+    - name: Checking the status of Docker service  
+      debug:
+        var: y
+
+    - name: Creating directory for copying HTML file
+      file:
+        path: "/website"
+        state: directory
+
+    - name: Copying local file into the directory
+      copy:
+        src: "myhome.html"
+        dest: "/website/"
+      register: c 
+
+    - name: Status of the local file   
+      debug:
+        var: c
+
+    - name: Creating a container using HTTPD(Webserver) Image
+      docker_container:
+        name: Ansidoc
+        image: httpd
+        state: started
+        exposed_ports:
+        - "80"
+        ports:
+        - "8086:80"
+        volumes: 
+        - /website:/usr/local/apache2/htdocs/
+        tty: true
+        detach: true
+        
+    - command: "docker ps"
+      register: d
+
+    - name: Status of the Container   
+      debug:
+        var: d      
+
+    - command: "setenforce 0"
+      register: s
+
+    - name: Disabling SElinux security
+      debug: 
+        var: s
+
+    - command: "systemctl stop firewalld" 
+      register: f
+
+    - name: Disabling firewall
+      debug: 
+        var: s
+
+    
